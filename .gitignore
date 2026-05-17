@@ -1,0 +1,4 @@
+detection_output
+videos
+__pycache__
+*.pt
