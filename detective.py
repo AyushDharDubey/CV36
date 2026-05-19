@@ -90,7 +90,7 @@ class YOLODetector:
             List of Detection objects with tracking IDs
         """
         results = self.model.track(frame, conf=conf_threshold,
-                                  verbose=False, persist=True)
+                                  verbose=False, persist=True, tracker='custom_botsort.yaml')
         detections = []
 
         for result in results:
