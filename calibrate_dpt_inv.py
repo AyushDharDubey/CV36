@@ -2,20 +2,21 @@ import cv2
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
 CALIBRATION_IMAGE_PATH = "videos/stripes.png" 
 
 
 CALIBRATION_POINTS = [
     # --- Tiles (163 cm range) ---
-    # (567, 495, 163),
-    # (488, 496, 163),
-    # (647, 491, 163),
+    (567, 495, 163),
+    (488, 496, 163),
+    (647, 491, 163),
     
     # # --- Tiles (193 cm range) ---
-    # (496, 474, 193),
-    # (564, 473, 193),
-    # (633, 470, 193),
+    (496, 474, 193),
+    (564, 473, 193),
+    (633, 470, 193),
     
     # --- Yellow Markings @ (590 cm range) ---
     (389, 367, 590),
@@ -109,31 +110,34 @@ for x_px, y_px, true_dist in CALIBRATION_POINTS:
 X = np.array(extracted_depths)
 y = np.array(actual_distances)
 
-# Compute 3rd-order polynomial regression coefficients (y = a3*x^3 + a2*x^2 + a1*x + a0)
-coefficients = np.polyfit(X, y, 3)
-a3, a2, a1, a0 = coefficients
+# Define target function: y = (a / (x + b)) + c
+def inverse_model(x, a, b, c):
+    return (a / (x + b)) + c
+
+print("\nFitting data to rational model for stable close-range convergence...")
+# p0 provides an initial guess [a, b, c] to help optimization stabilize
+params, covariance = curve_fit(inverse_model, X, y, p0=[216000, 10, -5])
+a, b, c = params
 
 print("\n" + "="*50)
-print("coefficientst:")
-print(f"a3 = {a3:.8f}")
-print(f"a2 = {a2:.8f}")
-print(f"a1 = {a1:.8f}")
-print(f"a0 = {a0:.8f}")
+print("SUCCESS! Copy these rational coefficients into your main script:")
+print(f"a = {a:.6f}")
+print(f"b = {b:.6f}")
+print(f"c = {c:.6f}")
 print("="*50)
 
 
-
-poly_function = np.poly1d(coefficients)
-x_line = np.linspace(min(X), max(X), 100)
-y_line = poly_function(x_line)
+# Extend line plot out by 50% to visually verify zero-convergence limits
+x_line = np.linspace(min(X), max(X) * 1.5, 200) 
+y_line = inverse_model(x_line, a, b, c)
 
 plt.figure(figsize=(8, 5))
-plt.scatter(X, y, color='red', s=50, label='Your Marked Image Points')
-plt.plot(x_line, y_line, color='blue', linewidth=2, label='3rd-Order Regression Fit')
-plt.xlabel('Raw MiDaS Depth Output')
-plt.ylabel('Real Distance (cm)')
-plt.title('DPT_Hybrid Calibration Curve Verification')
+plt.scatter(X, y, color='red', s=50, label='Your Marked Coordinates')
+plt.plot(x_line, y_line, color='green', linewidth=2, label='Rational Inverse Fit')
+plt.xlabel('Raw Depth Output (X)')
+plt.ylabel('Real Distance (y in cm)')
+plt.title('DPT_Hybrid Rational Fit Convergence Verification')
 plt.legend()
-plt.gca().invert_xaxis()  # MiDaS values drop as object distance increases
+plt.gca().invert_xaxis()  # Invert axis because higher raw depths mean closer distances
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.show()
