@@ -45,7 +45,7 @@ class VideoProcessor:
         # a3 = -0.00000165, a2 = 0.00617685, a1 = -7.76795188, a0 = 3457.55560786
         # return (a3 * (median_depth ** 3)) + (a2 * (median_depth ** 2)) + (a1 * median_depth) + a0
 
-        a, b, c = 157994.966563, -372.880209, -13.939203
+        a, b, c = 162068.454209, -224.37777, 50.175
         return (a / (median_depth + b)) + c
 
     @staticmethod
